@@ -23,7 +23,9 @@
 # misc
 .DS_Store
 *.pem
-
+.env
+.env.local
+users.json
 # debug
 npm-debug.log*
 yarn-debug.log*
