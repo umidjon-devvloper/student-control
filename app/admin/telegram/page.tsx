@@ -107,6 +107,7 @@ export default function TelegramManagementPage() {
         text: `🧪 <b>Sinov Xabari</b>\n\nBu Student Control tizimidan sinov xabari.\n\nAgar bu xabarni oldingiz, ${type === "student" ? "o'quvchi" : "ota-ona"} bildirishnomalari to'g'ri sozlangan! ✅`,
       });
 
+      
       if (success) {
         toast.success("Sinov xabari yuborildi!");
       } else {
