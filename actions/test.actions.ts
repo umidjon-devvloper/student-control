@@ -20,7 +20,9 @@ export interface CreateTestInput {
   status: "draft" | "active" | "closed";
 }
 
-export async function createTest(data: CreateTestInput): Promise<ActionResult<ITest>> {
+export async function createTest(
+  data: CreateTestInput,
+): Promise<ActionResult<ITest>> {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "admin") {
@@ -46,7 +48,7 @@ export async function createTest(data: CreateTestInput): Promise<ActionResult<IT
 
 export async function updateTest(
   id: string,
-  data: Partial<CreateTestInput>
+  data: Partial<CreateTestInput>,
 ): Promise<ActionResult<ITest>> {
   try {
     const session = await getServerSession(authOptions);
@@ -122,7 +124,8 @@ export async function duplicateTest(id: string): Promise<ActionResult<ITest>> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to duplicate test",
+      error:
+        error instanceof Error ? error.message : "Failed to duplicate test",
     };
   }
 }
@@ -136,10 +139,8 @@ export async function getTests(): Promise<ActionResult<ITest[]>> {
 
     await connectDB();
 
-    const tests = await Test.find({ createdBy: session.user.id })
-      .sort({ createdAt: -1 })
-      .lean();
-
+    const tests = await Test.find().sort({ createdAt: -1 }).lean();
+    console.log("Fetched tests from DB:", tests);
     return { success: true, data: JSON.parse(JSON.stringify(tests)) };
   } catch (error) {
     return {
@@ -149,7 +150,9 @@ export async function getTests(): Promise<ActionResult<ITest[]>> {
   }
 }
 
-export async function getActiveTestsForStudent(): Promise<ActionResult<ITest[]>> {
+export async function getActiveTestsForStudent(): Promise<
+  ActionResult<ITest[]>
+> {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "student") {
@@ -210,7 +213,7 @@ export async function publishTest(id: string): Promise<ActionResult<ITest>> {
     const test = await Test.findByIdAndUpdate(
       id,
       { status: "active" },
-      { new: true }
+      { new: true },
     );
 
     if (!test) {

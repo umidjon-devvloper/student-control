@@ -40,7 +40,10 @@ export default function TestsPage() {
   useEffect(() => {
     const fetchTests = async () => {
       const result = await getTests();
+      console.log("Fetched tests:", result);
+
       if (result.success && result.data) {
+        console.log("Fetched tests:", result);
         setTests(result.data as unknown as Test[]);
       }
       setIsLoading(false);
@@ -105,7 +108,9 @@ export default function TestsPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Tests</h1>
-            <p className="text-muted-foreground">Manage your tests and quizzes</p>
+            <p className="text-muted-foreground">
+              Manage your tests and quizzes
+            </p>
           </div>
         </div>
         <Card>
@@ -141,26 +146,48 @@ export default function TestsPage() {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Title</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Subject</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Questions</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Time Limit</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Title
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Subject
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Questions
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Time Limit
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {tests?.map((test) => (
                   <tr key={test._id} className="border-t">
-                    <td className="px-4 py-3 text-sm font-medium">{test.title}</td>
+                    <td className="px-4 py-3 text-sm font-medium">
+                      {test.title}
+                    </td>
                     <td className="px-4 py-3 text-sm">{test.subject}</td>
-                    <td className="px-4 py-3 text-sm">{test.questions.length}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {test.questions.length}
+                    </td>
                     <td className="px-4 py-3 text-sm">{test.timeLimit} min</td>
-                    <td className="px-4 py-3 text-sm">{getStatusBadge(test.status)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {getStatusBadge(test.status)}
+                    </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-1">
                         <Link href={`/admin/tests/${test._id}/results`}>
-                          <Button variant="ghost" size="sm" title="View Results">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="View Results"
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
@@ -186,8 +213,9 @@ export default function TestsPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Test</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete <strong>{test.title}</strong>?
-                                This action cannot be undone.
+                                Are you sure you want to delete{" "}
+                                <strong>{test.title}</strong>? This action
+                                cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -207,7 +235,10 @@ export default function TestsPage() {
                 ))}
                 {(!tests || tests.length === 0) && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-muted-foreground"
+                    >
                       No tests found. Create your first test to get started.
                     </td>
                   </tr>
