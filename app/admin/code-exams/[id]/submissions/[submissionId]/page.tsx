@@ -57,6 +57,7 @@ export default function GradeSubmissionPage() {
       try {
         // Fetch exam details
         const examResult = await getCodeExamById(examId);
+        console.log(examResult)
         if (examResult.success && examResult.data) {
           setExam(examResult.data as unknown as CodeExam);
         }

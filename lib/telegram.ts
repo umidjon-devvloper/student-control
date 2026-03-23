@@ -1,4 +1,4 @@
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_BOT_TOKEN = "8751043417:AAFoHOFA5SNgep8xjcUjeXh7xw1YLkjfSsU"
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 export interface TelegramMessage {
   chatId: string;
