@@ -332,3 +332,61 @@ export async function gradeCodeSubmission(
     };
   }
 }
+
+export async function getCodeSubmissionById(submissionId: string): Promise<ActionResult<any>> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await connectDB();
+
+    const submission = await CodeSubmission.findById(submissionId)
+      .populate("studentId", "name username")
+      .populate("examId", "title language maxScore referenceSolution");
+
+    if (!submission) {
+      return { success: false, error: "Submission not found" };
+    }
+
+    // Check if user has permission to view this submission
+    if (session.user.role === "student" && submission.studentId._id.toString() !== session.user.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    return { success: true, data: JSON.parse(JSON.stringify(submission)) };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch submission",
+    };
+  }
+}
+
+export async function getStudentAttempts(examId: string, studentId?: string): Promise<ActionResult<number>> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await connectDB();
+
+    const targetStudentId = studentId || session.user.id;
+    
+    // Count attempts (submissions with submittedAt)
+    const attempts = await CodeSubmission.countDocuments({
+      examId,
+      studentId: targetStudentId,
+      submittedAt: { $exists: true },
+    });
+
+    return { success: true, data: attempts };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch attempts",
+    };
+  }
+}

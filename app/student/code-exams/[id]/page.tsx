@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { getCodeExamById, submitCodeExam } from "@/actions/code-exam.actions";
+import { getCodeExamById, submitCodeExam, getStudentAttempts } from "@/actions/code-exam.actions";
 import Link from "next/link";
-import { ArrowLeft, Clock, AlertCircle, Lightbulb, Play, Send } from "lucide-react";
+import { ArrowLeft, Clock, AlertCircle, Lightbulb, Play, Send, RotateCcw } from "lucide-react";
 
 interface CodeExam {
   _id: string;
@@ -36,6 +36,10 @@ export default function TakeCodeExamPage() {
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showHints, setShowHints] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [maxAttempts] = useState(10);
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<{success: boolean; message: string} | null>(null);
 
   useEffect(() => {
     const fetchExam = async () => {
@@ -46,6 +50,12 @@ export default function TakeCodeExamPage() {
           setExam(examData);
           setCode(examData.starterCode || "");
           setTimeLeft(examData.timeLimit * 60);
+          
+          // Fetch attempts
+          const attemptsResult = await getStudentAttempts(examId);
+          if (attemptsResult.success && attemptsResult.data !== undefined) {
+            setAttempts(attemptsResult.data);
+          }
         } else {
           toast.error("Code exam not found");
           router.push("/student/code-exams");
@@ -140,12 +150,90 @@ export default function TakeCodeExamPage() {
   }, [hasStarted, examId, code, timeLeft, tabSwitchCount]);
 
   const handleStart = () => {
+    // Check if max attempts reached
+    if (attempts >= maxAttempts) {
+      toast.error(`Siz ${maxAttempts} ta urinishdan foydalandingiz. Urinishlar tugadi!`);
+      return;
+    }
     setHasStarted(true);
-    toast.success("Code exam started! Good luck!");
+    toast.success("Code exam boshlandi! Omad!");
+  };
+
+  // Check code before submitting
+  const handleCheckCode = async () => {
+    if (!code.trim()) {
+      toast.error("Avval kod yozing!");
+      return;
+    }
+    
+    setIsChecking(true);
+    setCheckResult(null);
+    
+    try {
+      // Simulate code checking (you can replace this with actual code validation)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Basic validation - check if code has required elements
+      const hasRequiredElements = checkCodeValidity(code, exam?.language || "");
+      
+      if (hasRequiredElements) {
+        setCheckResult({
+          success: true,
+          message: "Kod to'g'ri yozilgan! Yuborishingiz mumkin."
+        });
+        toast.success("Kod tekshirildi - to'g'ri!");
+      } else {
+        setCheckResult({
+          success: false,
+          message: "Kodda xatolik bor. Iltimos, tekshirib qayta urinib ko'ring."
+        });
+        toast.error("Kodda xatolik aniqlandi!");
+      }
+    } catch (error) {
+      toast.error("Kodni tekshirishda xatolik");
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  // Basic code validation function
+  const checkCodeValidity = (code: string, language: string): boolean => {
+    // Remove comments and whitespace for basic checks
+    const cleanCode = code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').trim();
+    
+    if (!cleanCode || cleanCode.length < 10) {
+      return false;
+    }
+    
+    // Language-specific checks
+    switch (language.toLowerCase()) {
+      case 'html':
+        // Check for basic HTML structure
+        return cleanCode.includes('<') && cleanCode.includes('>');
+      case 'css':
+        // Check for CSS rules
+        return cleanCode.includes('{') && cleanCode.includes('}');
+      case 'javascript':
+      case 'js':
+        // Check for JS syntax
+        return cleanCode.includes('function') || cleanCode.includes('const') || cleanCode.includes('let') || cleanCode.includes('var');
+      case 'python':
+        // Check for Python syntax
+        return cleanCode.includes('def') || cleanCode.includes('print') || cleanCode.includes('import');
+      default:
+        return cleanCode.length > 20;
+    }
   };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+    
+    // Check attempts limit
+    if (attempts >= maxAttempts) {
+      toast.error(`Siz ${maxAttempts} ta urinishdan foydalandingiz. Urinishlar tugadi!`);
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -159,13 +247,20 @@ export default function TakeCodeExamPage() {
       });
 
       if (result.success) {
-        toast.success("Code submitted successfully!");
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        toast.success(`Kod yuborildi! Urinish: ${newAttempts}/${maxAttempts}`);
+        
+        if (newAttempts >= maxAttempts) {
+          toast.error("Bu sizning oxirgi urinishingiz edi.");
+        }
+        
         router.push("/student/code-exams");
       } else {
-        toast.error(result.error || "Failed to submit code");
+        toast.error(result.error || "Kod yuborishda xatolik");
       }
     } catch (error) {
-      toast.error("An error occurred");
+      toast.error("Xatolik yuz berdi");
     } finally {
       setIsSubmitting(false);
     }
@@ -192,7 +287,7 @@ export default function TakeCodeExamPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <Card>
           <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Loading...</p>
+            <p className="text-center text-muted-foreground">Yuklanmoqda...</p>
           </CardContent>
         </Card>
       </div>
@@ -208,7 +303,7 @@ export default function TakeCodeExamPage() {
         <Link href="/student/code-exams">
           <Button variant="outline" size="sm" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            Back to Code Exams
+            Code Exam larga qaytish
           </Button>
         </Link>
 
@@ -224,29 +319,43 @@ export default function TakeCodeExamPage() {
 
             <div className="bg-muted p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
-                <span>Language:</span>
+                <span>Til:</span>
                 <span className="font-medium">{getLanguageLabel(exam.language)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Time Limit:</span>
-                <span className="font-medium">{exam.timeLimit} minutes</span>
+                <span>Vaqt limiti:</span>
+                <span className="font-medium">{exam.timeLimit} daqiqa</span>
               </div>
               <div className="flex justify-between">
-                <span>Max Score:</span>
-                <span className="font-medium">{exam.maxScore} points</span>
+                <span>Maksimal ball:</span>
+                <span className="font-medium">{exam.maxScore} ball</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Urinishlar:</span>
+                <span className={`font-medium ${attempts >= maxAttempts ? 'text-red-500' : 'text-green-500'}`}>
+                  {attempts} / {maxAttempts}
+                </span>
               </div>
             </div>
+            
+            {attempts >= maxAttempts && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-lg">
+                <p className="text-red-500 font-medium text-center">
+                  ⚠️ Siz {maxAttempts} ta urinishdan foydalandingiz. Urinishlar tugadi!
+                </p>
+              </div>
+            )}
 
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium">Important Rules:</p>
+                  <p className="font-medium">Muhim qoidalar:</p>
                   <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                    <li>Do not switch tabs or windows during the exam</li>
-                    <li>Tab switching will be recorded and may affect your score</li>
-                    <li>The exam will auto-submit when time runs out</li>
-                    <li>Your code will be reviewed by AI for quality</li>
+                    <li>Imtihon davomida tab yoki oynani almashtirmang</li>
+                    <li>Tab almashtirish qayd etiladi va bahoga ta'sir qilishi mumkin</li>
+                    <li>Vaqt tugaganda imtihon avtomatik yuboriladi</li>
+                    <li>Sizda {maxAttempts} ta urinish imkoniyati bor</li>
                   </ul>
                 </div>
               </div>
@@ -256,9 +365,10 @@ export default function TakeCodeExamPage() {
               onClick={handleStart}
               className="w-full gap-2"
               size="lg"
+              disabled={attempts >= maxAttempts}
             >
               <Play className="w-4 h-4" />
-              Start Code Exam
+              {attempts >= maxAttempts ? "Urinishlar tugadi" : "Code Exam ni boshlash"}
             </Button>
           </CardContent>
         </Card>
@@ -297,7 +407,7 @@ export default function TakeCodeExamPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Task Description</CardTitle>
+              <CardTitle>Vazifa tavsifi</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="prose dark:prose-invert max-w-none">
@@ -317,9 +427,9 @@ export default function TakeCodeExamPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4" />
-                    Hints ({exam.hints.length})
+                    Maslahatlar ({exam.hints.length})
                   </span>
-                  <span>{showHints ? "Hide" : "Show"}</span>
+                  <span>{showHints ? "Yashirish" : "Ko'rsatish"}</span>
                 </Button>
               </CardHeader>
               {showHints && (
@@ -335,35 +445,66 @@ export default function TakeCodeExamPage() {
               )}
             </Card>
           )}
+          
+          {/* Attempts info */}
+          <Card className="bg-blue-500/5 border-blue-500/20">
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Urinishlar:</span>
+                <Badge variant={attempts >= maxAttempts - 2 ? "destructive" : "secondary"}>
+                  {attempts} / {maxAttempts}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right side - Code Editor */}
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Your Solution</CardTitle>
+            <CardTitle>Sizning yechimingiz</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
             <Textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="font-mono text-sm min-h-[400px] resize-none"
-              placeholder="Write your code here..."
+              placeholder="Kodni shu yerga yozing..."
               spellCheck={false}
             />
           </CardContent>
         </Card>
       </div>
+      
+      {/* Check result message */}
+      {checkResult && (
+        <div className={`p-4 rounded-lg ${checkResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+          <p className={`text-center font-medium ${checkResult.success ? 'text-green-500' : 'text-red-500'}`}>
+            {checkResult.message}
+          </p>
+        </div>
+      )}
 
-      {/* Submit button */}
-      <div className="flex justify-end">
+      {/* Action buttons */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleCheckCode}
+            disabled={isChecking || !code.trim()}
+          >
+            <RotateCcw className={`w-4 h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
+            {isChecking ? "Tekshirilmoqda..." : "Kodni tekshirish"}
+          </Button>
+        </div>
         <Button
           onClick={handleSubmit}
-          disabled={isSubmitting || !code.trim()}
+          disabled={isSubmitting || !code.trim() || attempts >= maxAttempts}
           size="lg"
           className="gap-2"
         >
           <Send className="w-4 h-4" />
-          {isSubmitting ? "Submitting..." : "Submit Solution"}
+          {isSubmitting ? "Yuborilmoqda..." : attempts >= maxAttempts ? "Urinishlar tugadi" : "Yechimni yuborish"}
         </Button>
       </div>
     </div>

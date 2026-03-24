@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCodeExamById, gradeCodeSubmission } from "@/actions/code-exam.actions";
+import { getCodeExamById, gradeCodeSubmission, getCodeSubmissionById } from "@/actions/code-exam.actions";
 import Link from "next/link";
 import { ArrowLeft, Clock, User, CheckCircle, XCircle } from "lucide-react";
 
@@ -55,35 +55,47 @@ export default function GradeSubmissionPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch exam details
-        const examResult = await getCodeExamById(examId);
-        console.log(examResult)
-        if (examResult.success && examResult.data) {
-          setExam(examResult.data as unknown as CodeExam);
+        // Fetch submission details (includes exam data)
+        const submissionResult = await getCodeSubmissionById(submissionId);
+        if (submissionResult.success && submissionResult.data) {
+          const subData = submissionResult.data;
+          setSubmission({
+            _id: subData._id,
+            studentId: subData.studentId,
+            submittedCode: subData.submittedCode,
+            language: subData.language,
+            submittedAt: subData.submittedAt,
+            timeSpent: subData.timeSpent,
+            tabSwitchCount: subData.tabSwitchCount || 0,
+            isLate: subData.isLate,
+            adminScore: subData.adminScore,
+            feedback: subData.feedback,
+            finalScore: subData.finalScore,
+            gradedAt: subData.gradedAt,
+          });
+          
+          // Set exam data from populated submission
+          if (subData.examId) {
+            setExam({
+              _id: subData.examId._id,
+              title: subData.examId.title,
+              language: subData.examId.language,
+              maxScore: subData.examId.maxScore,
+              referenceSolution: subData.examId.referenceSolution,
+            });
+          }
+        } else {
+          toast.error(submissionResult.error || "Topshiriq topilmadi");
         }
-
-        // TODO: Fetch submission details - for now using mock data
-        // In a real implementation, you'd create a getSubmissionById action
-        const mockSubmission: Submission = {
-          _id: submissionId,
-          studentId: { name: "Student Name", username: "student123" },
-          submittedCode: "// Student's submitted code\nfunction solution() {\n  return 'Hello World';\n}",
-          language: "javascript",
-          submittedAt: new Date().toISOString(),
-          timeSpent: 1800,
-          tabSwitchCount: 2,
-          isLate: false,
-        };
-        setSubmission(mockSubmission);
       } catch (error) {
-        toast.error("Failed to fetch data");
+        toast.error("Ma'lumotlarni yuklashda xatolik");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [examId, submissionId]);
+  }, [submissionId]);
 
   const handleGrade = async () => {
     if (!grade || isSubmitting) return;
@@ -96,13 +108,13 @@ export default function GradeSubmissionPage() {
       });
 
       if (result.success) {
-        toast.success("Submission graded successfully!");
+        toast.success("Baholash muvaffaqiyatli!");
         router.push(`/admin/code-exams/${examId}/submissions`);
       } else {
-        toast.error(result.error || "Failed to grade submission");
+        toast.error(result.error || "Baholashda xatolik");
       }
     } catch (error) {
-      toast.error("An error occurred");
+      toast.error("Xatolik yuz berdi");
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +131,7 @@ export default function GradeSubmissionPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         <Card>
           <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Loading...</p>
+            <p className="text-center text-muted-foreground">Yuklanmoqda...</p>
           </CardContent>
         </Card>
       </div>
@@ -131,9 +143,9 @@ export default function GradeSubmissionPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Submission not found</p>
+            <p className="text-muted-foreground">Topshiriq topilmadi</p>
             <Button onClick={() => router.back()} className="mt-4">
-              Go Back
+              Orqaga
             </Button>
           </CardContent>
         </Card>
@@ -150,11 +162,11 @@ export default function GradeSubmissionPage() {
         <Link href={`/admin/code-exams/${examId}/submissions`}>
           <Button variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Submissions
+            Topshiriqlarga qaytish
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Grade Submission</h1>
+          <h1 className="text-2xl font-bold">Topshiriqni baholash</h1>
           <p className="text-muted-foreground">{exam.title}</p>
         </div>
       </div>
@@ -164,13 +176,13 @@ export default function GradeSubmissionPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
-            Student Information
+            O'quvchi ma'lumotlari
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Name</p>
+              <p className="text-sm text-muted-foreground">Ism</p>
               <p className="font-medium">{submission.studentId.name}</p>
             </div>
             <div>
@@ -178,7 +190,7 @@ export default function GradeSubmissionPage() {
               <p className="font-medium">{submission.studentId.username}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Time Spent</p>
+              <p className="text-sm text-muted-foreground">Sarflangan vaqt</p>
               <p className="font-medium flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 {formatTime(submission.timeSpent)}
@@ -187,16 +199,16 @@ export default function GradeSubmissionPage() {
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               {submission.isLate ? (
-                <Badge variant="destructive">Late</Badge>
+                <Badge variant="destructive">Kechikkan</Badge>
               ) : (
-                <Badge className="bg-green-500">On Time</Badge>
+                <Badge className="bg-green-500">Vaqtida</Badge>
               )}
             </div>
             {submission.tabSwitchCount > 0 && (
               <div>
-                <p className="text-sm text-muted-foreground">Tab Switches</p>
+                <p className="text-sm text-muted-foreground">Tab almashish</p>
                 <p className="font-medium text-yellow-500">
-                  {submission.tabSwitchCount} times
+                  {submission.tabSwitchCount} marta
                 </p>
               </div>
             )}
@@ -209,11 +221,11 @@ export default function GradeSubmissionPage() {
         {/* Student Code */}
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Student Solution</CardTitle>
+            <CardTitle>O'quvchi yechimi</CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
             <pre className="bg-muted p-4 rounded-lg overflow-auto max-h-[500px] text-sm font-mono">
-              {submission.submittedCode}
+              {submission.submittedCode || "Kod yuborilmagan"}
             </pre>
           </CardContent>
         </Card>
@@ -223,7 +235,7 @@ export default function GradeSubmissionPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              Reference Solution
+              Namunaviy yechim
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1">
@@ -234,7 +246,7 @@ export default function GradeSubmissionPage() {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <XCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No reference solution provided</p>
+                <p>Namunaviy yechim kiritilmagan</p>
               </div>
             )}
           </CardContent>
@@ -244,12 +256,12 @@ export default function GradeSubmissionPage() {
       {/* Grading Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Grade Submission</CardTitle>
+          <CardTitle>Baholash</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="score">Score (out of {exam.maxScore})</Label>
+              <Label htmlFor="score">Ball ({exam.maxScore} dan)</Label>
               <Input
                 id="score"
                 type="number"
@@ -257,13 +269,13 @@ export default function GradeSubmissionPage() {
                 max={exam.maxScore}
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                placeholder="Enter score"
+                placeholder="Ball kiriting"
                 disabled={isGraded}
               />
             </div>
             {isGraded && (
               <div className="space-y-2">
-                <Label>Current Score</Label>
+                <Label>Joriy ball</Label>
                 <div className="text-2xl font-bold">
                   {submission.finalScore} / {exam.maxScore}
                 </div>
@@ -272,12 +284,12 @@ export default function GradeSubmissionPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="feedback">Feedback</Label>
+            <Label htmlFor="feedback">Fikr-mulohaza</Label>
             <Textarea
               id="feedback"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Provide feedback to the student..."
+              placeholder="O'quvchiga fikr-mulohaza qoldiring..."
               rows={4}
               disabled={isGraded}
             />
@@ -289,14 +301,14 @@ export default function GradeSubmissionPage() {
               disabled={!grade || isSubmitting}
               className="w-full"
             >
-              {isSubmitting ? "Submitting..." : "Submit Grade"}
+              {isSubmitting ? "Saqlanmoqda..." : "Bahoni saqlash"}
             </Button>
           ) : (
             <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
               <div className="flex items-center gap-2 text-green-500">
                 <CheckCircle className="w-5 h-5" />
                 <span className="font-medium">
-                  Graded on {new Date(submission.gradedAt!).toLocaleString()}
+                  {new Date(submission.gradedAt!).toLocaleString()} da baholandi
                 </span>
               </div>
             </div>

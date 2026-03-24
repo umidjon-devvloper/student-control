@@ -41,6 +41,7 @@ export default function StudentTestsPage() {
           getActiveTestsForStudent(),
           getStudentSubmissions(),
         ]);
+        console.log(testsResult, submissionsResult);
 
         if (testsResult.success && testsResult.data) {
           setActiveTests(testsResult.data as unknown as Test[]);
