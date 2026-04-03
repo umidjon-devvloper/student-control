@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/check-deadlines",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/daily-reports",
-      "schedule": "0 20 * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }
